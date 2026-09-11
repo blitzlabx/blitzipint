@@ -613,15 +613,15 @@ header {
   </section>
 
   <div class="card">
-    <form id="form" autocomplete="off">
+    <form id="form" autocomplete="off" action="javascript:void(0)" onsubmit="return false;">
       <div class="input-row">
         <div class="input-wrap">
           <span class="input-icon">
             <svg viewBox="0 0 24 24"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg>
           </span>
-          <input id="url" type="url" placeholder="https://www.pinterest.com/pin/..." required>
+          <input id="url" type="text" inputmode="url" enterkeyhint="go" placeholder="https://www.pinterest.com/pin/..." autocomplete="off" autocapitalize="off" spellcheck="false">
         </div>
-        <button type="submit" class="btn" id="submitBtn">
+        <button type="button" class="btn" id="submitBtn">
           <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
           Extract
         </button>
@@ -680,10 +680,53 @@ header {
   }
 
   function copyText(text, btn) {
-    navigator.clipboard.writeText(text).then(function () {
-      btn.style.color = '#22c55e';
-      setTimeout(function () { btn.style.color = ''; }, 1200);
-    });
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () {
+        btn.style.color = '#22c55e';
+        setTimeout(function () { btn.style.color = ''; }, 1200);
+      }).catch(function () {
+        fallbackCopy(text, btn);
+      });
+    } else {
+      fallbackCopy(text, btn);
+    }
+  }
+
+  function fallbackCopy(text, btn) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); btn.style.color = '#22c55e'; } catch (e) {}
+    document.body.removeChild(ta);
+    setTimeout(function () { btn.style.color = ''; }, 1200);
+  }
+
+  function downloadMedia(url, type) {
+    showStatus('loading', 'Preparing download...');
+    fetch(url, { mode: 'cors' })
+      .then(function (r) { return r.blob(); })
+      .then(function (blob) {
+        var ext = 'jpg';
+        if (type === 'video' || /mp4/i.test(url)) ext = 'mp4';
+        else if (type === 'gif' || /gif/i.test(url)) ext = 'gif';
+        else if (/png/i.test(url)) ext = 'png';
+        else if (/webp/i.test(url)) ext = 'webp';
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'blitzipint_' + Date.now() + '.' + ext;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
+        hideStatus();
+      })
+      .catch(function () {
+        window.open(url, '_blank', 'noopener');
+        hideStatus();
+      });
   }
 
   function renderResults(data) {
@@ -703,57 +746,108 @@ header {
       item.className = 'media-item';
       item.style.animationDelay = (i * 0.05) + 's';
 
-      var thumbHtml;
-      if (m.poster || (m.type === 'image' || m.type === 'gif')) {
-        var src = m.poster || m.url;
-        thumbHtml = '<img class="media-thumb" src="' + src + '" alt="" loading="lazy" onerror="this.classList.add(\\'placeholder\\');this.outerHTML=\\'<div class=\\\\'media-thumb placeholder\\\\'>' + (m.type === 'video' ? iconVideo : iconImage) + '</div>\\'">';
+      var thumb = document.createElement('div');
+      thumb.className = 'media-thumb placeholder';
+      thumb.innerHTML = (m.type === 'video') ? iconVideo : iconImage;
+      if (m.poster || m.type === 'image' || m.type === 'gif') {
+        var img = document.createElement('img');
+        img.className = 'media-thumb';
+        img.alt = '';
+        img.loading = 'lazy';
+        img.src = m.poster || m.url;
+        img.onerror = function () {
+          img.replaceWith(thumb);
+        };
+        item.appendChild(img);
       } else {
-        thumbHtml = '<div class="media-thumb placeholder">' + (m.type === 'video' ? iconVideo : iconImage) + '</div>';
+        item.appendChild(thumb);
       }
 
-      item.innerHTML =
-        thumbHtml +
-        '<div class="media-info">' +
-          '<div class="media-type">' + m.type + '</div>' +
-          '<div class="media-quality">' + (m.quality || 'standard') + (m.score ? ' · score ' + m.score : '') + '</div>' +
-          '<div class="media-url">' + m.url + '</div>' +
-        '</div>' +
-        '<div class="media-actions">' +
-          '<button type="button" class="icon-btn" title="Copy URL" data-copy="' + m.url.replace(/"/g, '&quot;') + '">' + iconCopy + '</button>' +
-          '<a class="icon-btn primary" href="' + m.url + '" target="_blank" rel="noopener" download title="Download">' + iconDownload + '</a>' +
-        '</div>';
+      var info = document.createElement('div');
+      info.className = 'media-info';
+      info.innerHTML =
+        '<div class="media-type">' + m.type + '</div>' +
+        '<div class="media-quality">' + (m.quality || 'standard') + (m.score ? ' · score ' + m.score : '') + '</div>' +
+        '<div class="media-url">' + m.url + '</div>';
+      item.appendChild(info);
 
-      mediaList.appendChild(item);
-    });
+      var actions = document.createElement('div');
+      actions.className = 'media-actions';
 
-    mediaList.querySelectorAll('[data-copy]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        copyText(btn.getAttribute('data-copy'), btn);
+      var copyBtn = document.createElement('button');
+      copyBtn.type = 'button';
+      copyBtn.className = 'icon-btn';
+      copyBtn.title = 'Copy URL';
+      copyBtn.innerHTML = iconCopy;
+      copyBtn.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        copyText(m.url, copyBtn);
       });
+
+      var dlBtn = document.createElement('button');
+      dlBtn.type = 'button';
+      dlBtn.className = 'icon-btn primary';
+      dlBtn.title = 'Download';
+      dlBtn.innerHTML = iconDownload;
+      dlBtn.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        downloadMedia(m.url, m.type);
+      });
+
+      actions.appendChild(copyBtn);
+      actions.appendChild(dlBtn);
+      item.appendChild(actions);
+      mediaList.appendChild(item);
     });
   }
 
-  form.addEventListener('submit', async function (e) {
-    e.preventDefault();
-    var url = urlInput.value.trim();
-    if (!url) return;
+  function runExtract() {
+    var url = (urlInput.value || '').trim();
+    if (!url) {
+      showStatus('error', 'Paste a Pinterest or pin.it link first');
+      return;
+    }
 
     submitBtn.disabled = true;
     resultsEl.classList.remove('show');
     showStatus('loading', 'Resolving pin...');
 
-    try {
-      var res = await fetch('/api/media?url=' + encodeURIComponent(url));
-      var data = await res.json();
-      renderResults(data);
-      if (!data.ok) {
-        showStatus('error', data.error || 'Extraction failed');
-      }
-    } catch (err) {
-      showStatus('error', 'Network error. Please try again.');
-      resultsEl.classList.remove('show');
-    } finally {
-      submitBtn.disabled = false;
+    fetch('/api/media?url=' + encodeURIComponent(url))
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        renderResults(data);
+        if (!data.ok) {
+          showStatus('error', data.error || 'Extraction failed');
+        }
+      })
+      .catch(function () {
+        showStatus('error', 'Network error. Please try again.');
+        resultsEl.classList.remove('show');
+      })
+      .finally(function () {
+        submitBtn.disabled = false;
+      });
+  }
+
+  submitBtn.addEventListener('click', function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    runExtract();
+  });
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    runExtract();
+    return false;
+  });
+
+  urlInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      runExtract();
     }
   });
 })();
