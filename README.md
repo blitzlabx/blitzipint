@@ -266,3 +266,49 @@ MIT
 ---
 
 Made by Blitz · @blitzlabx
+
+---
+
+## Web UI
+
+The root path `/` serves a responsive dark-themed frontend.
+
+- Paste a public Pinterest URL
+- Click Extract
+- View media cards with copy / download actions
+- Works on mobile and desktop
+- No emojis; SVG icons only
+
+---
+
+## Vercel notes
+
+If you see `INTERNAL_FUNCTION_INVOCATION_FAILED`:
+
+1. Make sure `vercel.json` is present (included in this repo)
+2. Redeploy from a clean build
+3. Check function logs in the Vercel dashboard for the real stack trace
+4. Confirm dependencies installed correctly (`cheerio`, `axios`, `fastify`, `zod`)
+
+Recommended:
+
+```bash
+vercel --prod --force
+```
+
+The function is configured with `maxDuration: 30` and 1024 MB memory.
+
+---
+
+## Docker
+
+```bash
+docker build -t blitzipint .
+docker run -p 3000:3000 blitzipint
+```
+
+---
+
+## License
+
+MIT — see `LICENSE`

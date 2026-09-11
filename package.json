@@ -1,7 +1,7 @@
 {
   "name": "blitzipint",
   "version": "1.2.4",
-  "description": "blitzipint – fast Pinterest media extractor powered by klickpin resolution. Built by Blitz.",
+  "description": "blitzipint \u2013 Pinterest media extractor with web UI. Built by Blitz.",
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
@@ -9,7 +9,8 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "test": "tsx src/test.ts",
-    "lint": "echo \"no linter configured yet\""
+    "lint": "echo \"no linter configured yet\"",
+    "vercel-build": "echo 'vercel uses ts directly'"
   },
   "keywords": [
     "pinterest",
