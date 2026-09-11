@@ -1,0 +1,41 @@
+{
+  "name": "blitzipint",
+  "version": "1.2.4",
+  "description": "blitzipint – fast Pinterest media extractor powered by klickpin resolution. Built by Blitz.",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "tsx src/test.ts",
+    "lint": "echo \"no linter configured yet\""
+  },
+  "keywords": [
+    "pinterest",
+    "downloader",
+    "video",
+    "gif",
+    "image",
+    "blitzipint",
+    "blitz",
+    "media-extractor"
+  ],
+  "author": "Blitz <blitzlabx>",
+  "license": "MIT",
+  "dependencies": {
+    "@fastify/cors": "^10.0.1",
+    "axios": "^1.7.7",
+    "cheerio": "^1.0.0",
+    "fastify": "^5.0.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.4",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
